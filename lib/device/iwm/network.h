@@ -192,6 +192,11 @@ private:
     NetworkProtocol *protocol = nullptr;
 
     /**
+     * The Temporary protocol object used for copy
+     */
+    NetworkProtocol *copyProtocol;
+
+    /**
      * Network Status object
      */
     union _status

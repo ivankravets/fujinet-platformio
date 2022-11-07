@@ -159,6 +159,11 @@ private:
     FNJSON json;
 
     /**
+     * The Temporary protocol object used for copy
+     */
+    NetworkProtocol *copyProtocol;
+
+    /**
      * Has JSON been sent via CLR?
      */
     bool jsonRecvd = false;

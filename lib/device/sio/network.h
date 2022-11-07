@@ -249,6 +249,11 @@ private:
     unsigned short json_bytes_remaining=0;
 
     /**
+     * The Temporary protocol object used for copy
+     */
+    NetworkProtocol *copyProtocol;
+
+    /**
      * Instantiate protocol object
      * @return bool TRUE if protocol successfully called open(), FALSE if protocol could not open
      */

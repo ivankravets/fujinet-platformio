@@ -164,6 +164,11 @@ private:
     bool jsonRecvd = false;
 
     /**
+     * The Temporary protocol object used for copy
+     */
+    NetworkProtocol *copyProtocol;
+
+    /**
      * The Receive buffer for this N: device
      */
     std::string *receiveBuffer = nullptr;
