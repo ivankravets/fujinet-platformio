@@ -86,18 +86,19 @@ bool _RamLoad(char *fn, uint16_t address)
 		}
 		fclose(f);
 	}
-	Debug_printf("CCP last address: %04x\n",address);
+	Debug_printf("CCP last address: %04x\n", address);
 	return (result);
 }
 
 //
 // Hardware functions, new in 5.x
 //
-void _HardwareOut(const uint32 Port, const uint32 Value) {
-
+void _HardwareOut(const uint32 Port, const uint32 Value)
+{
 }
 
-uint32 _HardwareIn(const uint32 Port) {
+uint32 _HardwareIn(const uint32 Port)
+{
 	return 0;
 }
 
@@ -106,28 +107,32 @@ uint32 _HardwareIn(const uint32 Port) {
 FILE *rootdir;
 FILE *userdir;
 
-bool _sys_exists(uint8* filename)
+bool _sys_exists(uint8 *filename)
 {
 	return fnSDFAT.exists(full_path((char *)filename));
 }
 
 int _sys_fputc(uint8_t ch, FILE *f)
 {
+	taskYIELD();
 	return fputc(ch, f);
 }
 
 void _sys_fflush(FILE *f)
 {
+	taskYIELD();
 	fflush(f);
 }
 
 void _sys_fclose(FILE *f)
 {
+	taskYIELD();
 	fclose(f);
 }
 
 int _sys_select(uint8_t *disk)
 {
+	taskYIELD();
 	return fnSDFAT.exists(full_path((char *)disk));
 }
 
@@ -143,12 +148,14 @@ long _sys_filesize(uint8_t *fn)
 	}
 
 	fclose(fp);
+	taskYIELD();
 	return fs;
 }
 
 int _sys_openfile(uint8_t *fn)
 {
 	FILE *fp = fnSDFAT.file_open(full_path((char *)fn), "r");
+	taskYIELD();
 	if (fp)
 	{
 		fclose(fp);
@@ -161,6 +168,7 @@ int _sys_openfile(uint8_t *fn)
 int _sys_makefile(uint8_t *fn)
 {
 	FILE *fp = fnSDFAT.file_open(full_path((char *)fn), "w");
+	taskYIELD();
 	if (fp)
 	{
 		fclose(fp);
@@ -172,6 +180,7 @@ int _sys_makefile(uint8_t *fn)
 
 int _sys_deletefile(uint8_t *fn)
 {
+	taskYIELD();
 	return fnSDFAT.remove(full_path((char *)fn));
 }
 
@@ -181,6 +190,7 @@ int _sys_renamefile(uint8_t *fn, uint8_t *newname)
 
 	from = std::string(full_path((char *)fn));
 	to = std::string(full_path((char *)newname));
+	taskYIELD();
 
 	return fnSDFAT.rename(from.c_str(), to.c_str());
 }
@@ -213,6 +223,7 @@ bool _sys_extendfile(char *fn, unsigned long fpos)
 		}
 	}
 	fclose(fp);
+	taskYIELD();
 	return true;
 }
 
@@ -236,6 +247,7 @@ uint8_t _sys_readseq(uint8_t *fn, long fpos)
 		else
 		{
 			// set DMA buffer to EOF
+			taskYIELD();
 			memset(dmabuf, 0x1a, BlkSZ);
 			bytesread = fread(&dmabuf[0], BlkSZ, sizeof(uint8_t), f);
 			if (bytesread)
@@ -248,6 +260,7 @@ uint8_t _sys_readseq(uint8_t *fn, long fpos)
 		result = 0x10;
 	}
 	fclose(f);
+	taskYIELD();
 	return (result);
 }
 
@@ -265,6 +278,7 @@ uint8_t _sys_writeseq(uint8_t *fn, long fpos)
 	{
 		if (fseek(f, fpos, SEEK_SET) == 0)
 		{
+			taskYIELD();
 			if (fwrite(_RamSysAddr(dmaAddr), BlkSZ, sizeof(uint8_t), f))
 				result = 0x00;
 		}
@@ -278,6 +292,7 @@ uint8_t _sys_writeseq(uint8_t *fn, long fpos)
 		result = 0x10;
 	}
 	fclose(f);
+	taskYIELD();
 	return (result);
 }
 
@@ -296,6 +311,7 @@ uint8_t _sys_readrand(uint8_t *fn, long fpos)
 		{
 			memset(dmabuf, 0x1A, BlkSZ);
 			bytesread = fread(&dmabuf[0], BlkSZ, sizeof(uint8_t), f);
+			taskYIELD();
 			if (bytesread)
 				memcpy((uint8_t *)&RAM[dmaAddr], dmabuf, BlkSZ);
 			result = bytesread ? 0x00 : 0x01;
@@ -343,6 +359,7 @@ uint8_t _sys_writerand(uint8_t *fn, long fpos)
 	{
 		if (fseek(f, fpos, SEEK_SET) == 0)
 		{
+			taskYIELD();
 			if (fwrite(_RamSysAddr(dmaAddr), BlkSZ, sizeof(uint8_t), f))
 				result = 0x00;
 		}
@@ -381,6 +398,7 @@ uint8_t _findnext(uint8_t isdir)
 	{
 		while ((entry = fnSDFAT.dir_read()))
 		{
+			taskYIELD();
 			strcpy((char *)findNextDirName, entry->filename); // careful watch for string overflow!
 			isfile = !entry->isDir;
 			bytes = entry->size;
@@ -431,11 +449,13 @@ uint8_t _findfirst(uint8_t isdir)
 	fileRecords = 0;
 	fileExtents = 0;
 	fileExtentsUsed = 0;
+	taskYIELD();
 	return (_findnext(isdir));
 }
 
 uint8_t _findnextallusers(uint8_t isdir)
 {
+	taskYIELD();
 	return _findnext(isdir);
 }
 
@@ -446,6 +466,7 @@ uint8_t _findfirstallusers(uint8_t isdir)
 	fileRecords = 0;
 	fileExtents = 0;
 	fileExtentsUsed = 0;
+	taskYIELD();
 	return (_findnextallusers(isdir));
 }
 
@@ -466,6 +487,7 @@ void _MakeUserDir()
 	{
 		return;
 	}
+	taskYIELD();
 
 	fnSDFAT.create_path(full_path((char *)path));
 }
@@ -495,6 +517,7 @@ uint8_t _sys_makedisk(uint8_t drive)
 			fnSDFAT.create_path(full_path((char *)path));
 		}
 	}
+	taskYIELD();
 	return (result);
 }
 
@@ -503,26 +526,30 @@ uint8_t _sys_makedisk(uint8_t drive)
 
 int _kbhit(void)
 {
+	taskYIELD();
 	return uxQueueMessagesWaiting(txq);
 }
 
 uint8_t _getch(void)
 {
 	uint8_t c;
-	xQueueReceive(txq,&c,portMAX_DELAY);
+	taskYIELD();
+	xQueueReceive(txq, &c, portMAX_DELAY);
 	return c;
 }
 
 uint8_t _getche(void)
 {
 	uint8_t c = _getch();
-	xQueueSend(rxq,&c,portMAX_DELAY);
+	taskYIELD();
+	xQueueSend(rxq, &c, portMAX_DELAY);
 	return c;
 }
 
 void _putch(uint8_t ch)
 {
-	xQueueSend(rxq,&ch,portMAX_DELAY);
+	taskYIELD();
+	xQueueSend(rxq, &ch, portMAX_DELAY);
 }
 
 void _clrscr(void)
@@ -622,7 +649,7 @@ uint8_t bios_tcpListen(uint16_t port)
 		delete server;
 	}
 
-	server = new fnTcpServer(port,1);
+	server = new fnTcpServer(port, 1);
 	server->begin(port);
 
 	Debug_printf("bios_tcpListen - Now listening on port %u\n", port);

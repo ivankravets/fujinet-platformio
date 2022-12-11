@@ -29,8 +29,8 @@
 #define VersionBCD 0x58
 
 /* Definition of which CCP to use (must define only one) */
-#define CCP_INTERNAL		// If this is defined, an internal CCP will emulated
-//#define CCP_DR
+//#define CCP_INTERNAL		// If this is defined, an internal CCP will emulated
+#define CCP_DR
 //#define CCP_CCPZ
 //#define CCP_ZCPR2
 //#define CCP_ZCPR3

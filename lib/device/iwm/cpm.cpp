@@ -40,14 +40,23 @@ static void cpmTask(void *arg)
         vTaskDelay(100);
         _puts(CCPHEAD);
         _PatchCPM();
-        _ccp();
+        _RamLoad((char *)CCPname, CCPaddr);     // Loads the CCP binary file into memory
+        Z80reset();                             // Resets the Z80 CPU
+        SET_LOW_REGISTER(BC, _RamRead(0x0004)); // Sets C to the current drive/user
+        PC = CCPaddr;                           // Sets CP/M application jump point
+        while (1)
+        {
+            SingleStep=true; // Single step.
+            Z80run(); // Starts simulation
+            taskYIELD();
+        }
     }
 }
 
 iwmCPM::iwmCPM()
 {
-    rxq = xQueueCreate(2048,sizeof(char));
-    txq = xQueueCreate(2048,sizeof(char));
+    rxq = xQueueCreate(2048, sizeof(char));
+    txq = xQueueCreate(2048, sizeof(char));
 }
 
 void iwmCPM::send_status_reply_packet()
@@ -59,7 +68,7 @@ void iwmCPM::send_status_reply_packet()
     data[1] = 0; // block size 1
     data[2] = 0; // block size 2
     data[3] = 0; // block size 3
-    IWM.iwm_send_packet(id(),iwm_packet_type_t::status,SP_ERR_NOERROR, data, 4);
+    IWM.iwm_send_packet(id(), iwm_packet_type_t::status, SP_ERR_NOERROR, data, 4);
 }
 
 void iwmCPM::send_status_dib_reply_packet()
@@ -147,7 +156,7 @@ void iwmCPM::iwm_status(iwm_decoded_cmd_t cmd)
         data_buffer[0] = mw & 0xFF;
         data_buffer[1] = mw >> 8;
         data_len = 2;
-        Debug_printf("%u bytes waiting\n",mw);
+        Debug_printf("%u bytes waiting\n", mw);
         break;
     }
 
@@ -168,18 +177,17 @@ void iwmCPM::iwm_read(iwm_decoded_cmd_t cmd)
 
     Debug_printf("\r\nDevice %02x Read %04x bytes from address %06x\n", id(), numbytes, addy);
 
-    memset(data_buffer,0,sizeof(data_buffer));
+    memset(data_buffer, 0, sizeof(data_buffer));
 
-    for (int i=0;i<numbytes;i++)
+    for (int i = 0; i < numbytes; i++)
     {
         char b;
-        xQueueReceive(rxq,&b,portMAX_DELAY);
+        xQueueReceive(rxq, &b, portMAX_DELAY);
         data_buffer[i] = b;
         data_len++;
     }
 
-    Debug_printf("%s\n",data_buffer);
-
+    Debug_printf("%s\n", data_buffer);
 
     Debug_printf("\r\nsending block packet ...");
     IWM.iwm_send_packet(id(), iwm_packet_type_t::data, 0, data_buffer, data_len);
@@ -236,7 +244,7 @@ void iwmCPM::iwm_ctrl(iwm_decoded_cmd_t cmd)
         {
         case 'B': // Boot
             Debug_printf("!!! STARTING CP/M TASK!!!\n");
-            xTaskCreate(cpmTask, "cpmtask", 32768, NULL, 11, &cpmTaskHandle);
+            xTaskCreatePinnedToCore(cpmTask, "cpmtask", 32768, NULL, 20, &cpmTaskHandle, 1);
             break;
         case 'W': // Write
             Debug_printf("Pushing character %c", data_buffer[0]);
@@ -245,7 +253,7 @@ void iwmCPM::iwm_ctrl(iwm_decoded_cmd_t cmd)
         }
     else
         err_result = SP_ERR_IOERROR;
-    
+
     send_reply_packet(err_result);
 }
 

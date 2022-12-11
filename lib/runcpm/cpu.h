@@ -22,6 +22,7 @@ int32 Status = 0; /* Status of the CPU 0=running 1=end request 2=back to CCP */
 int32 Debug = 0;
 int32 Break = -1;
 int32 Step = -1;
+int32 SingleStep = 0;
 
 #ifdef iDEBUG
 FILE* iLogFile;
@@ -4671,6 +4672,9 @@ static inline void Z80run(void) {
 			PUSH(PC);
 			PC = 0x38;
 		}
+
+		if (SingleStep == true)
+			break;
 	}
 end_decode:
 	;
